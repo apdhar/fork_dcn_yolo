@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-from torchvision.ops import deform_conv2d
+import mmcv.ops
 
 
 from ultralytics.utils.torch_utils import fuse_conv_and_bn
@@ -55,6 +55,11 @@ __all__ = (
     "SCDown",
 )
 
+import math
+import torch
+import torch.nn as nn
+import mmcv.ops
+
 class DCNv2(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  padding=1, dilation=1, groups=1, deformable_groups=1):
@@ -84,7 +89,7 @@ class DCNv2(nn.Module):
             bias=True,
         )
         self.bn = nn.BatchNorm2d(out_channels)
-        self.act = Conv.default_act
+        self.act = nn.ReLU(inplace=True)  # Replace Conv.default_act if necessary
         self.reset_parameters()
 
     def forward(self, x):
@@ -92,18 +97,17 @@ class DCNv2(nn.Module):
         o1, o2, mask = torch.chunk(offset_mask, 3, dim=1)
         offset = torch.cat((o1, o2), dim=1)  # 8 18 20 20
         mask = torch.sigmoid(mask)  # 8 9 20 20
-        x = torch.ops.torchvision.deform_conv2d(
+        x = mmcv.ops.deform_conv2d(
             x,
             self.weight,
             offset,
             mask,
             self.bias,
-            self.stride[0], self.stride[1],
-            self.padding[0], self.padding[1],
-            self.dilation[0], self.dilation[1],
-            self.groups,
-            self.deformable_groups,
-            True
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+            deform_groups=self.deformable_groups
         )
         x = self.bn(x)
         x = self.act(x)
@@ -118,6 +122,7 @@ class DCNv2(nn.Module):
         self.bias.data.zero_()
         self.conv_offset_mask.weight.data.zero_()
         self.conv_offset_mask.bias.data.zero_()
+
 
 class Bottleneck_DCN(nn.Module):
     # Standard bottleneck with DCN
