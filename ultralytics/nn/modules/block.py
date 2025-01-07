@@ -5,6 +5,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
+from torchvision.ops import deform_conv2d
+
 
 from ultralytics.utils.torch_utils import fuse_conv_and_bn
 
