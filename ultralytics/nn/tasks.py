@@ -7,7 +7,6 @@ import types
 from copy import deepcopy
 from pathlib import Path
 from ultralytics.nn. SwinTransformer import SwinTransformer
-from .conv import Conv
 import torch
 import torch.nn as nn
 
