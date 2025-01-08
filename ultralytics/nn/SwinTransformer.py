@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from ultralytics.nn.modules import conv
 
 class WindowAttention(nn.Module):
  
