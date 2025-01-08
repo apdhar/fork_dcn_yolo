@@ -9,7 +9,7 @@ from pathlib import Path
 from ultralytics.nn. SwinTransformer import SwinTransformer
 import torch
 import torch.nn as nn
-from ultralytics.nn.BiFPN import BiFPN_Concat
+from ultralytics.nn.bifpn import Concat_BiFPN
 
 from ultralytics.nn.modules import (
     C2f_DCN,
@@ -1049,8 +1049,8 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             args = [ch[f]]
         elif m is Concat:
             c2 = sum(ch[x] for x in f)
-        elif m is BiFPN_Concat:
-            c2= max([ch[x] for x in f])
+        elif m is Concat_BiFPN:
+            c2 = sum (ch[x] for x in f)
         elif m in {Detect, WorldDetect, Segment, Pose, OBB, ImagePoolingAttn, v10Detect}:
             args.append([ch[x] for x in f])
             if m is Segment:
