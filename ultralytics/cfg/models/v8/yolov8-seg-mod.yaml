@@ -28,30 +28,29 @@ backbone:
 # YOLOv8.0n head
 # YOLOv8.0-P2 head
 head:
-  - [-1, 1, Conv, (512, 1, 1)]  # 10
+  - [-1, 1, Conv, [512, 1, 1]]  # 10
   - [-1, nn.Upsample, [None, 2, "nearest"]]  # 11
-  - [[-1, 6], 1, BiFPN_Concat, (256, 256)]  # cat backbone P4
-  - [-1, 3, C2f, (512)]  # 12
+  - [[-1, 6], 1, BiFPN_Concat, [256, 256]]  # cat backbone P4
+  - [-1, 3, C2f, [512]]  # 12
 
-  - [-1, 1, Conv, (256, 1, 1)]  # 14
-  - [-1, nn.Upsample, [None, 2, "nearest"]]  # 15
-  - [[-1, 4], 1, BiFPN_Concat, (128, 128)]  # cat backbone P3
-  - [-1, C2f, (256)]  # 17 (P3/8-small)
+  - [-1, 1, Conv, [256, 1, 1]]  # 10
+  - [-1, nn.Upsample, [None, 2, "nearest"]]  # 11
+  - [[-1, 4], 1, BiFPN_Concat, [128, 128]]  # cat backbone P4
+  - [-1, 3, C2f, [256]]  # 12
+  
+  - [-1, 1, Conv, [128, 1, 1]]  # 10
+  - [-1, nn.Upsample, [None, 2, "nearest"]]  # 11
+  - [[-1, 2], 1, BiFPN_Concat, [64, 64]]  # cat backbone P4
+  - [-1, 3, C2f, [128]]  # 12
 
-  - [-1, 1, Conv, (128, 1, 1)]  # 18
-  - [-1, nn.Upsample, [None, 2, "nearest"]]  # 19
-  - [[-1, 2], 1, BiFPN_Concat, (64, 64)]  # cat backbone P2
-  - [-1, C2f, (128)]  # 21 (P2/4-tiny)
+  - [-4, 1, Conv, [128, 1, 1]]  # 22
+  - [-2, 1, Conv, [128, 3, 2]]  # 23
+  - [[-1, -2, 18], 1, BiFPN_Concat, [64, 64]]  # cat head P3
+  - [-1, 3, C2f, [256]]  # 25 (P2/8-small)
 
-  - [-4, 1, Conv, (128, 1, 1)]  # 22
-  - [-4, 2, Conv, (128, 3, 2)]  # 23
-  - [[-1, -2], 1, BiFPN_Concat, (64, 64)]  # cat head P3
-  - [-1, 3, C2f, (256)]  # 25 (P2/8-small)
+  - [6, 1, Conv, [256, 1, 1]] # 26
+  - [-2, 1, Conv, [256, 3, 2]] #27
+  - [[-1, -2, 14], 1, BiFPN_Concat, [128, 128]] # cat head P4
+  - [-1, 3, C2f, [512]] #29 (P4/16-medium)
 
-  - [-6, 1, Conv, (256, 1, 1)]  # 26
-  - [-2, 2, Conv, (256, 3, 2)]  # 27
-  - [[-1, -2, 14], 1, BiFPN_Concat, (128, 128)]  # cat head P4
-  - [-1, 3, C2f, (512)]  # 29 (P4/16-medium)
-
-  - [[15, 18, 21], 1, Detect, [nc]]  # Detect(P3, P4, P5)
-
+  - [[15, 18, 21], 1, Segment, [nc, 32, 256]] # Segment(P3, P4, P5)
