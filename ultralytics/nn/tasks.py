@@ -6,6 +6,7 @@ import re
 import types
 from copy import deepcopy
 from pathlib import Path
+from ultralytics.nn. SwinTransformer import SwinTransformer
 
 import torch
 import torch.nn as nn
@@ -990,6 +991,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             SPPELAN,
             C2fAttn,
             C3,
+            SwinTransformer,
             C3TR,
             C3Ghost,
             nn.ConvTranspose2d,
