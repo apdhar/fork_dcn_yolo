@@ -10,6 +10,8 @@ from ultralytics.nn. SwinTransformer import SwinTransformer
 import torch
 import torch.nn as nn
 from ultralytics.nn.bifpn import Concat_BiFPN
+from ultralytics.nn.simAM import SimAM
+
 
 from ultralytics.nn.modules import (
     C2f_DCN,
@@ -1065,6 +1067,11 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             args = [c1, c2, *args[1:]]
         elif m is CBFuse:
             c2 = ch[f[-1]]
+        elif m in (SimAM):
+            c1, c2 = ch[f], args[0]
+            if c2 != nc:  # if c2 not equal to number of classes (i.e. for Classify() output)
+                c2 = make_divisible(min(c2, max_channels) * width, 8)
+            args = [c1, c2, *args[1:]]
         else:
             c2 = ch[f]
 
