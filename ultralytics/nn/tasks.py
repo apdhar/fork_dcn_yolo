@@ -11,7 +11,6 @@ import torch
 import torch.nn as nn
 from ultralytics.nn.bifpn import Concat_BiFPN
 from ultralytics.nn.simAM import SimAM
-from ultralytics.nn.CoordConv import C2f_CD
 
 from ultralytics.nn.modules import (
     C2f_DCN,
