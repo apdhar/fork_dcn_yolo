@@ -24,75 +24,39 @@ __all__ = (
     "RepConv",
 )
 
-class AddCoords(nn.Module):
-    def __init__(self, radius_channel=False):
-        super(AddCoords, self).__init__()
-        self.radius_channel = radius_channel
-
-    def forward(self, in_tensor):
-        batch_size_tensor = in_tensor.shape[0]
-
-        xx_ones = torch.ones([1, in_tensor.shape[2]], dtype=torch.int32)
-        xx_ones = xx_ones.unsqueeze(-1)
-
-        xx_range = torch.arange(in_tensor.shape[2], dtype=torch.int32).unsqueeze(0)
-        xx_range = xx_range.unsqueeze(1)
-
-        xx_channel = torch.matmul(xx_ones, xx_range)
-        xx_channel = xx_channel.unsqueeze(-1)
-
-        yy_ones = torch.ones([1, in_tensor.shape[3]], dtype=torch.int32)
-        yy_ones = yy_ones.unsqueeze(1)
-
-        yy_range = torch.arange(in_tensor.shape[3], dtype=torch.int32).unsqueeze(0)
-        yy_range = yy_range.unsqueeze(-1)
-
-        yy_channel = torch.matmul(yy_range, yy_ones)
-        yy_channel = yy_channel.unsqueeze(-1)
-
-        xx_channel = xx_channel.permute(0, 3, 1, 2)
-        yy_channel = yy_channel.permute(0, 3, 1, 2)
-
-        xx_channel = xx_channel.float() / (in_tensor.shape[2] - 1)
-        yy_channel = yy_channel.float() / (in_tensor.shape[3] - 1)
-
-        xx_channel = xx_channel * 2 - 1
-        yy_channel = yy_channel * 2 - 1
-
-        xx_channel = xx_channel.repeat(batch_size_tensor, 1, 1, 1)
-        yy_channel = yy_channel.repeat(batch_size_tensor, 1, 1, 1)
-
-        out = torch.cat([in_tensor, xx_channel, yy_channel], dim=1)
-
-        if self.radius_channel:
-            radius_calc = torch.sqrt(torch.pow(xx_channel - 0.5, 2) + torch.pow(yy_channel - 0.5, 2))
-            out = torch.cat([out, radius_calc], dim=1)
-
-        return out
-
-
 class CoordConv(nn.Module):
-    """Add any additional coordinate channels to the input tensor and apply convolution."""
+    """CoordConv layer: Adds coordinate channels to the input tensor before applying a standard convolution."""
 
-    def __init__(self, c1, c2, k=1, s=1, p=None, g=1, d=1, act=True, radius_channel=False):
-        """Initialize CoordConv with added coordinate channels."""
-        super(CoordConv, self).__init__()
-        self.addcoord = AddCoords(radius_channel=radius_channel)
-        self.conv = nn.Conv2d(c1 + 2 + (1 if radius_channel else 0), c2, k, s, padding=autopad(k, p, d), groups=g, dilation=d, bias=False)
+    def __init__(self, c1, c2, k=1, s=1, p=None, g=1, d=1, act=True):
+        """Initialize CoordConv with given arguments."""
+        super().__init__()
+        self.addcoords = AddCoords2D()
+        self.conv = nn.Conv2d(c1 + 2, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
         self.bn = nn.BatchNorm2d(c2)
         self.act = nn.SiLU() if act is True else act if isinstance(act, nn.Module) else nn.Identity()
 
-    def forward(self, in_tensor):
+    def forward(self, x):
         """Apply coordinate addition, convolution, batch normalization, and activation to input tensor."""
-        out = self.addcoord(in_tensor)
-        out = self.conv(out)
-        return self.act(self.bn(out))
+        x = self.addcoords(x)
+        return self.act(self.bn(self.conv(x)))
 
-    def forward_fuse(self, in_tensor):
+    def forward_fuse(self, x):
         """Apply coordinate addition and convolution without batch normalization."""
-        out = self.addcoord(in_tensor)
-        out = self.conv(out)
-        return self.act(out)
+        x = self.addcoords(x)
+        return self.act(self.conv(x))
+
+
+class AddCoords2D(nn.Module):
+    """Adds x and y coordinate maps to the input tensor."""
+
+    def forward(self, x):
+        """Adds coordinate channels to input tensor."""
+        b, _, h, w = x.size()
+        device = x.device
+
+        yy = torch.linspace(-1, 1, steps=h, device=device).view(1, 1, h, 1).expand(b, 1, h, w)
+        xx = torch.linspace(-1, 1, steps=w, device=device).view(1, 1, 1, w).expand(b, 1, h, w)
+        return torch.cat([x, yy, xx], dim=1)
 
 
 def autopad(k, p=None, d=1):  # kernel, padding, dilation
