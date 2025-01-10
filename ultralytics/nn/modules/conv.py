@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 
 __all__ = (
+    "CoordConv",
     "Conv",
     "Conv2",
     "LightConv",
