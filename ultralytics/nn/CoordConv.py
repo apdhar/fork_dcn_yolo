@@ -1,12 +1,10 @@
 import torch
 import torch.nn as nn
 
-def autopad(k, p=None, d=1):  # kernel, padding, dilation
-    """Pad to 'same' shape outputs."""
-    if d > 1:
-        k = d * (k - 1) + 1 if isinstance(k, int) else [d * (x - 1) + 1 for x in k]  # actual kernel-size
+def autopad(k, p=None, d=1):
+    """Handle padding calculations."""
     if p is None:
-        p = k // 2 if isinstance(k, int) else [x // 2 for x in k]  # auto-pad
+        return (k - 1) // 2 * d  # auto-padding
     return p
 
 
@@ -17,7 +15,7 @@ class CoordConv(nn.Module):
         """Initialize CoordConv with added coordinate channels."""
         super(CoordConv, self).__init__()
         self.addcoord = AddCoords(radius_channel=radius_channel)
-        self.conv = nn.Conv2d(c1 + 2 + (1 if radius_channel else 0), c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
+        self.conv = nn.Conv2d(c1 + 2 + (1 if radius_channel else 0), c2, k, s, padding=autopad(k, p, d), groups=g, dilation=d, bias=False)
         self.bn = nn.BatchNorm2d(c2)
         self.act = nn.SiLU() if act is True else act if isinstance(act, nn.Module) else nn.Identity()
 
@@ -71,15 +69,13 @@ class AddCoords(nn.Module):
         xx_channel = xx_channel.repeat(batch_size_tensor, 1, 1, 1)
         yy_channel = yy_channel.repeat(batch_size_tensor, 1, 1, 1)
 
-        out = torch.cat([in_tensor.cuda(), xx_channel.cuda(), yy_channel.cuda()], dim=1)
+        out = torch.cat([in_tensor, xx_channel, yy_channel], dim=1)
 
         if self.radius_channel:
             radius_calc = torch.sqrt(torch.pow(xx_channel - 0.5, 2) + torch.pow(yy_channel - 0.5, 2))
-            out = torch.cat([out, radius_calc], dim=1).cuda()
+            out = torch.cat([out, radius_calc], dim=1)
 
         return out
-
-
 
 
 class C2f_CD(nn.Module):
