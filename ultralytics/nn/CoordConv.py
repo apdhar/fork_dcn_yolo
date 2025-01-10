@@ -1,3 +1,6 @@
+import torch
+import torch.nn as nn
+
 class CoordConv(nn.Module):
     """CoordConv layer: Adds coordinate channels to the input tensor before applying a standard convolution."""
 
