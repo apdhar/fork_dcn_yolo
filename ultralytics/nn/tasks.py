@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 from ultralytics.nn.bifpn import Concat_BiFPN
 from ultralytics.nn.simAM import SimAM
+from ultralytics.nn.cbam import CBAM
 
 from ultralytics.nn.modules import (
     C2f_DCN,
@@ -1070,6 +1071,9 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         elif m is CBFuse:
             c2 = ch[f[-1]]
         elif m in [SimAM]:
+            c2 = ch[f]
+            args = [c2, *args]
+        elif m in [CBAM]:
             c2 = ch[f]
             args = [c2, *args]
         else:
