@@ -14,6 +14,7 @@ from ultralytics.nn.simAM import SimAM
 
 from ultralytics.nn.modules import (
     C2f_DCN,
+    C2f_CD,
     AIFI,
     C1,
     C2,
@@ -984,6 +985,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             C1,
             C2,
             C2f,
+            C2f_CD,
             C3k2,
             RepNCSPELAN4,
             ELAN1,
@@ -1019,6 +1021,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
                 C1,
                 C2,
                 C2f,
+                C2f_CD,
                 C3k2,
                 C2fAttn,
                 C3,
