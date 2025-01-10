@@ -19,6 +19,7 @@ Example:
 
 from .block import (
     C2f_DCN,
+    C2f_CD,
     C1,
     C2,
     C2PSA,
