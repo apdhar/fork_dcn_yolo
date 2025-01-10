@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from ultralytics.nn.modules.conv import Conv
+from ultralytics.nn.modules.conv import *
 
 def autopad(k, p=None, d=1):
     """Handle padding calculations."""
@@ -88,7 +88,7 @@ class C2f_CD(nn.Module):
         self.c = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
         self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.ModuleList(CD_Bottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
+        self.m = nn.ModuleList(Bottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
 
     def forward(self, x):
         """Forward pass through C2f layer."""
