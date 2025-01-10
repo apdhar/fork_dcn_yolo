@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from ultralytics.nn.modules.conv import Conv
 
 def autopad(k, p=None, d=1):
     """Handle padding calculations."""
