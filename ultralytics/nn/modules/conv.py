@@ -46,17 +46,23 @@ class CoordConv(nn.Module):
         return self.act(self.conv(x))
 
 
+
 class AddCoords2D(nn.Module):
     """Adds x and y coordinate maps to the input tensor."""
 
     def forward(self, x):
         """Adds coordinate channels to input tensor."""
         b, _, h, w = x.size()
+        dtype = x.dtype  # Inherit the data type from input tensor
         device = x.device
 
-        yy = torch.linspace(-1, 1, steps=h, device=device).view(1, 1, h, 1).expand(b, 1, h, w)
-        xx = torch.linspace(-1, 1, steps=w, device=device).view(1, 1, 1, w).expand(b, 1, h, w)
+        # Generate coordinate channels
+        yy = torch.linspace(-1, 1, steps=h, device=device, dtype=dtype).view(1, 1, h, 1).expand(b, 1, h, w)
+        xx = torch.linspace(-1, 1, steps=w, device=device, dtype=dtype).view(1, 1, 1, w).expand(b, 1, h, w)
+        
+        # Concatenate the input tensor with the coordinate channels
         return torch.cat([x, yy, xx], dim=1)
+
 
 
 def autopad(k, p=None, d=1):  # kernel, padding, dilation
