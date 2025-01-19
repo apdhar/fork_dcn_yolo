@@ -61,6 +61,7 @@ from .block import (
 )
 from .conv import (
     CBAM,
+    SimConv,
     ChannelAttention,
     Concat,
     Conv,
@@ -114,6 +115,7 @@ __all__ = (
     "SPPF",
     "C1",
     "C2",
+    "SimConv",
     "C3",
     "C2f",
     "C3k2",
