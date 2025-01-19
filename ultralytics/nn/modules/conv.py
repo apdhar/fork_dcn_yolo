@@ -241,7 +241,7 @@ class RepConv(nn.Module):
     Based on https://github.com/DingXiaoH/RepVGG/blob/main/repvgg.py
     """
 
-    default_act = nn.RelU()  # default activation
+    default_act = nn.ReLU()  # default activation
 
     def __init__(self, c1, c2, k=3, s=1, p=1, g=1, d=1, act=True, bn=False, deploy=False):
         """Initializes Light Convolution layer with inputs, outputs & optional activation function."""
