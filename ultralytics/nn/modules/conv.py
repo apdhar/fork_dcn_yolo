@@ -10,6 +10,7 @@ import torch.nn as nn
 __all__ = (
     "CoordConv",
     "Conv",
+    "SimConv",
     "Conv2",
     "LightConv",
     "DWConv",
