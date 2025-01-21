@@ -104,12 +104,8 @@ class BboxLoss(nn.Module):
         "iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=True)"
         "loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum"
         
-        if config.bbox_loss == 'WIoU':
-            loss, iou = bbox_wiou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False)
-            loss_iou = (loss * weight).sum() / target_scores_sum
-        else:   # CIoU
-            iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=True)
-            loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
+        loss, iou = bbox_wiou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False)
+        loss_iou = (loss * weight).sum() / target_scores_sum
 
         # DFL loss
         if self.dfl_loss:
