@@ -1,5 +1,4 @@
 import torch
-from ultralytics import config
 
 class IoU_Cal:
     ''' pred, target: x0,y0,x1,y1
