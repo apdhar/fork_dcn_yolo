@@ -12,7 +12,6 @@ from ultralytics.utils.torch_utils import autocast
 from .metrics import bbox_iou, probiou
 from .tal import bbox2dist
 
-from ultralytics.utils.wiou import *
 
 class VarifocalLoss(nn.Module):
     """
@@ -101,11 +100,9 @@ class BboxLoss(nn.Module):
         """IoU loss."""
         weight = target_scores.sum(-1)[fg_mask].unsqueeze(-1)
         
-        "iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=True)"
-        "loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum"
+        iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=True)
+        loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
         
-        loss, iou = bbox_wiou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False)
-        loss_iou = (loss * weight).sum() / target_scores_sum
 
         # DFL loss
         if self.dfl_loss:
