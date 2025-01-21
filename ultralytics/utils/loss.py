@@ -11,7 +11,7 @@ from ultralytics.utils.torch_utils import autocast
 
 from .metrics import bbox_iou, probiou
 from .tal import bbox2dist
-wiou
+
 from ultralytics.utils.wiou import *
 
 class VarifocalLoss(nn.Module):
