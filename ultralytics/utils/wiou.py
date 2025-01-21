@@ -1,7 +1,5 @@
-import math
-
 import torch
-
+from ultralytics import config
 
 class IoU_Cal:
     ''' pred, target: x0,y0,x1,y1
@@ -10,22 +8,14 @@ class IoU_Cal:
             True: monotonic FM
             False: non-monotonic FM
         }
-        momentum: The momentum of running mean (This can be set by the function <momentum_estimation>)'''
+        momentum: The momentum of running mean'''
     iou_mean = 1.
-    monotonous = False
-    momentum = 1 - pow(0.05, 1 / (890 * 34))
+    momentum = 1 - pow(0.5, exp=1 / 7000)
     _is_train = True
 
-    @classmethod
-    def momentum_estimation(cls, n, t):
-        ''' n: Number of batches per training epoch
-            t: The epoch when mAP's ascension slowed significantly'''
-        time_to_real = n * t
-        cls.momentum = 1 - pow(0.05, 1 / time_to_real)
-        return cls.momentum
-
-    def __init__(self, pred, target):
+    def __init__(self, pred, target, monotonous=False):
         self.pred, self.target = pred, target
+        self.monotonous = monotonous
         self._fget = {
             # x,y,w,h
             'pred_xy': lambda: (self.pred[..., :2] + self.pred[..., 2: 4]) / 2,
@@ -36,8 +26,8 @@ class IoU_Cal:
             'min_coord': lambda: torch.minimum(self.pred[..., :4], self.target[..., :4]),
             'max_coord': lambda: torch.maximum(self.pred[..., :4], self.target[..., :4]),
             # The overlapping region
-            'wh_inter': lambda: torch.relu(self.min_coord[..., 2: 4] - self.max_coord[..., :2]),
-            's_inter': lambda: torch.prod(self.wh_inter, dim=-1),
+            'wh_inter': lambda: self.min_coord[..., 2: 4] - self.max_coord[..., :2],
+            's_inter': lambda: torch.prod(torch.relu(self.wh_inter), dim=-1),
             # The area covered
             's_union': lambda: torch.prod(self.pred_wh, dim=-1) +
                                torch.prod(self.target_wh, dim=-1) - self.s_inter,
@@ -74,14 +64,14 @@ class IoU_Cal:
         if cls._is_train: cls.iou_mean = (1 - cls.momentum) * cls.iou_mean + \
                                          cls.momentum * self.iou.detach().mean().item()
 
-    def _scaled_loss(self, loss, alpha=1.9, delta=3):
+    def _scaled_loss(self, loss, gamma=1.9, delta=3):
         if isinstance(self.monotonous, bool):
-            beta = self.iou.detach() / self.iou_mean
             if self.monotonous:
-                loss *= beta.sqrt()
+                loss *= (self.iou.detach() / self.iou_mean).sqrt()
             else:
-                divisor = delta * torch.pow(alpha, beta - delta)
-                loss *= beta / divisor
+                beta = self.iou.detach() / self.iou_mean
+                alpha = delta * torch.pow(gamma, beta - delta)
+                loss *= beta / alpha
         return loss
 
     @classmethod
@@ -95,45 +85,40 @@ class IoU_Cal:
         dist = torch.exp(self.l2_center / self.l2_box.detach())
         return self._scaled_loss(dist * self.iou)
 
-    @classmethod
-    def EIoU(cls, pred, target, self=None):
-        self = self if self else cls(pred, target)
-        penalty = self.l2_center / self.l2_box \
-                  + torch.square(self.d_center / self.wh_box).sum(dim=-1)
-        return self._scaled_loss(self.iou + penalty)
 
-    @classmethod
-    def GIoU(cls, pred, target, self=None):
-        self = self if self else cls(pred, target)
-        return self._scaled_loss(self.iou + (self.s_box - self.s_union) / self.s_box)
+def bbox_wiou(box1, box2, xywh=False, eps=1e-7):
 
-    @classmethod
-    def DIoU(cls, pred, target, self=None):
-        self = self if self else cls(pred, target)
-        return self._scaled_loss(self.iou + self.l2_center / self.l2_box)
+    if xywh:  # transform from xywh to xyxy
+        (x1, y1, w1, h1), (x2, y2, w2, h2) = box1.chunk(4, -1), box2.chunk(4, -1)
+        w1_, h1_, w2_, h2_ = w1 / 2, h1 / 2, w2 / 2, h2 / 2
+        b1_x1, b1_x2, b1_y1, b1_y2 = x1 - w1_, x1 + w1_, y1 - h1_, y1 + h1_
+        b2_x1, b2_x2, b2_y1, b2_y2 = x2 - w2_, x2 + w2_, y2 - h2_, y2 + h2_
+    else:  # x1, y1, x2, y2 = box1
+        b1_x1, b1_y1, b1_x2, b1_y2 = box1.chunk(4, -1)
+        b2_x1, b2_y1, b2_x2, b2_y2 = box2.chunk(4, -1)
+        w1, h1 = b1_x2 - b1_x1, b1_y2 - b1_y1 + eps
+        w2, h2 = b2_x2 - b2_x1, b2_y2 - b2_y1 + eps
 
-    @classmethod
-    def CIoU(cls, pred, target, eps=1e-4, self=None):
-        self = self if self else cls(pred, target)
-        v = 4 / math.pi ** 2 * \
-            (torch.atan(self.pred_wh[..., 0] / (self.pred_wh[..., 1] + eps)) -
-             torch.atan(self.target_wh[..., 0] / (self.target_wh[..., 1] + eps))) ** 2
-        alpha = v / (self.iou + v)
-        return self._scaled_loss(self.iou + self.l2_center / self.l2_box + alpha.detach() * v)
+    # Intersection area
+    inter = (b1_x2.minimum(b2_x2) - b1_x1.maximum(b2_x1)).clamp_(0) * (
+            b1_y2.minimum(b2_y2) - b1_y1.maximum(b2_y1)
+    ).clamp_(0)
 
-    @classmethod
-    def SIoU(cls, pred, target, theta=4, self=None):
-        self = self if self else cls(pred, target)
-        # Angle Cost
-        angle = torch.arcsin(torch.abs(self.d_center).min(dim=-1)[0] / (self.l2_center.sqrt() + 1e-4))
-        angle = torch.sin(2 * angle) - 2
-        # Dist Cost
-        dist = angle[..., None] * torch.square(self.d_center / self.wh_box)
-        dist = 2 - torch.exp(dist[..., 0]) - torch.exp(dist[..., 1])
-        # Shape Cost
-        d_shape = torch.abs(self.pred_wh - self.target_wh)
-        big_shape = torch.maximum(self.pred_wh, self.target_wh)
-        w_shape = 1 - torch.exp(- d_shape[..., 0] / big_shape[..., 0])
-        h_shape = 1 - torch.exp(- d_shape[..., 1] / big_shape[..., 1])
-        shape = w_shape ** theta + h_shape ** theta
-        return self._scaled_loss(self.iou + (dist + shape) / 2)
+    # Union Area
+    union = w1 * h1 + w2 * h2 - inter + eps
+
+    # IoU
+    iou = inter / union
+
+    cw = b1_x2.maximum(b2_x2) - b1_x1.minimum(b2_x1)  # convex (smallest enclosing box) width
+    ch = b1_y2.maximum(b2_y2) - b1_y1.minimum(b2_y1)  # convex height
+
+
+
+    b1 = torch.stack([b1_x1, b1_y1, b1_x2, b1_y2], dim=-1)
+    b2 = torch.stack([b2_x1, b2_y1, b2_x2, b2_y2], dim=-1)
+
+    self = IoU_Cal(b1, b2, monotonous=False)
+    loss = getattr(IoU_Cal, 'WIoU')(b1, b2, self=self)
+    iou = 1 - self.iou
+    return loss, iou
